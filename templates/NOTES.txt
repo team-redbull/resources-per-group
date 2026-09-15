@@ -1,0 +1,18 @@
+ownership-metrics installed into namespace {{ .Release.Namespace }}.
+
+1) Check the pod is running:
+   oc -n {{ .Release.Namespace }} get pods
+
+2) Curl the metric directly (the important gate):
+   oc -n {{ .Release.Namespace }} port-forward svc/{{ include "ownership-metrics.fullname" . }} 8080:8080
+   curl -s localhost:8080/metrics | grep {{ .Values.metric.prefix }}
+
+   Expected metric name:
+     {{ .Values.metric.prefix }}_{{ .Values.metric.name }}_info
+
+3) Label one HostedCluster:
+{{- range .Values.ownershipFields }}
+   {{ $.Values.labelPrefix }}/{{ . }}=<value>
+{{- end }}
+
+4) Then check in the console: Observe -> Metrics

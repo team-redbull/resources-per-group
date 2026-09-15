@@ -1,0 +1,33 @@
+# The Custom Resource State config.
+# This is what turns CR labels into a metric.
+# The ownership fields are generated from values.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ownership-metrics.fullname" . }}-crs
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ownership-metrics.labels" . | nindent 4 }}
+data:
+  crs.yaml: |
+    kind: CustomResourceStateMetrics
+    spec:
+      resources:
+        - groupVersionKind:
+            group: {{ .Values.customResource.group }}
+            version: {{ .Values.customResource.version }}
+            kind: {{ .Values.customResource.kind }}
+          metricNamePrefix: {{ .Values.metric.prefix }}
+          labelsFromPath:
+            cr_name:      [metadata, name]
+            cr_namespace: [metadata, namespace]
+          metrics:
+            - name: "{{ .Values.metric.name }}"
+              help: "Ownership labels for a {{ .Values.customResource.kind }}. Value is always 1."
+              each:
+                type: Info
+                info:
+                  labelsFromPath:
+                    {{- range .Values.ownershipFields }}
+                    {{ . }}: [metadata, labels, "{{ $.Values.labelPrefix }}/{{ . }}"]
+                    {{- end }}

@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ownership-metrics.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ownership-metrics.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "ownership-metrics.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ownership-metrics.selectorLabels" . | nindent 8 }}
+      annotations:
+        # This line solves the "ConfigMap changed but pod kept the old copy"
+        # trap. Edit values.yaml, and the pod restarts by itself.
+        checksum/crs-config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "ownership-metrics.fullname" . }}
+      containers:
+        - name: kube-state-metrics
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --custom-resource-state-config-file=/etc/ksm/crs.yaml
+            # Export ONLY our CR metric. No duplicate pod/node metrics.
+            - --custom-resource-state-only=true
+            - --port=8080
+            - --telemetry-port=8081
+          ports:
+            - name: http-metrics
+              containerPort: 8080
+            - name: telemetry
+              containerPort: 8081
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8081
+            initialDelaySeconds: 5
+          volumeMounts:
+            - name: crs-config
+              mountPath: /etc/ksm
+              readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: crs-config
+          configMap:
+            name: {{ include "ownership-metrics.fullname" . }}-crs
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

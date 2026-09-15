@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ownership-metrics
+description: Exports res-owner.io labels from HostedCluster CRs as Prometheus metrics
+type: application
+version: 0.1.0
+appVersion: "2.13.0"

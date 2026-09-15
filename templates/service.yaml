@@ -1,0 +1,35 @@
+# The scrape endpoint, and the object that tells Prometheus to use it.
+# The ServiceMonitor selects this Service, so they belong together.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ownership-metrics.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ownership-metrics.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "ownership-metrics.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http-metrics
+      port: 8080
+      targetPort: http-metrics
+{{- if .Values.serviceMonitor.enabled }}
+---
+# Picked up by OpenShift user workload monitoring.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "ownership-metrics.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ownership-metrics.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "ownership-metrics.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: http-metrics
+      interval: {{ .Values.serviceMonitor.interval }}
+      honorLabels: true
+{{- end }}
