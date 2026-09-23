@@ -30,6 +30,9 @@ spec:
             - --custom-resource-state-only=true
             - --port=8080
             - --telemetry-port=8081
+            # Watch ONLY this namespace. Without it, kube-state-metrics
+            # would watch every ConfigMap in the whole cluster.
+            - --namespaces={{ .Release.Namespace }}
             {{- range .Values.extraArgs }}
             - {{ . }}
             {{- end }}

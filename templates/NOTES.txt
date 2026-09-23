@@ -1,14 +1,15 @@
-ownership-metrics installed.
+ownership-metrics installed. {{ len .Values.clusters }} cluster(s) in the registry.
 
 Metric: {{ .Values.metric.prefix }}_{{ .Values.metric.name }}
-Reads:  {{ .Values.clusterOwner.kind }} objects ({{ .Values.clusterOwner.plural }}.{{ .Values.clusterOwner.group }})
 
 1) See the registry:
-   oc get {{ .Values.clusterOwner.plural }}
+   oc -n {{ .Release.Namespace }} get cm -l {{ .Values.labelPrefix }}{{ .Values.labelSeparator }}type
 
 2) THE GATE - real rows, not just HELP and TYPE:
    oc -n {{ .Release.Namespace }} port-forward svc/{{ include "ownership-metrics.fullname" . }} 8080:8080
    curl -s localhost:8080/metrics | grep -v '^#'
+
+   Expect {{ len .Values.clusters }} row(s), one per cluster.
 
 3) Nothing there? In order:
    oc -n {{ .Release.Namespace }} logs deploy/{{ include "ownership-metrics.fullname" . }} | grep -i -E "forbidden|suffix|error"

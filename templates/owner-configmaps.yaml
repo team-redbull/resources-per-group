@@ -1,0 +1,20 @@
+{{- include "ownership-metrics.validate" . }}
+{{- $root := . }}
+{{- range .Values.clusters }}
+---
+# The owner record for one cluster. Generated from the clusters list
+# in values.yaml. Argo owns it: remove the entry and it is pruned.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: owner-{{ .cluster }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "ownership-metrics.labels" $root | nindent 4 }}
+    {{ $root.Values.labelPrefix }}{{ $root.Values.labelSeparator }}cluster: {{ .cluster | quote }}
+    {{ $root.Values.labelPrefix }}{{ $root.Values.labelSeparator }}type: {{ .type | quote }}
+    {{- $entry := . }}
+    {{- range $root.Values.ownershipFields }}
+    {{ $root.Values.labelPrefix }}{{ $root.Values.labelSeparator }}{{ . }}: {{ index $entry . | quote }}
+    {{- end }}
+{{- end }}

@@ -1,7 +1,7 @@
 # ownership-metrics
 
-Runs **one** kube-state-metrics on the MCE hub. It reads `ClusterOwner`
-objects and exports one row per cluster:
+Runs **one** kube-state-metrics on the MCE hub. It reads the owner
+ConfigMaps this chart generates, and exports one row per cluster:
 
     kube_cluster_ownership_info{cr_name="cluster-b", type="ClickCluster",
       merkaz="haifa", anaf="infra", mador="platform"} 1
@@ -10,39 +10,49 @@ The value is always 1 and means nothing. The **labels** are the payload.
 
 ## The registry
 
-One `ClusterOwner` object per cluster, of any kind:
+The `clusters` list in `values.yaml` - normally set from the Argo
+Application - is the single source of truth:
 
-    apiVersion: cluster-owner.io/v1alpha1
-    kind: ClusterOwner
-    metadata:
-      name: cluster-b          # = the cluster's remote-write "cluster" label
-    spec:
-      type: ClickCluster       # or UPI
-      merkaz: haifa
-      anaf: infra
-      mador: platform
+    clusters:
+      - cluster: cluster-b        # = that cluster's remote-write "cluster" label
+        type: ClickCluster        # or UPI
+        merkaz: haifa
+        anaf: infra
+        mador: platform
 
 Hosted and UPI clusters are **identical** here. Only `type` differs.
 
-Add a cluster = add a file. Remove one = delete the file; Argo prunes it.
+Add a cluster = add four lines. Remove it = delete them, and Argo prunes
+its ConfigMap and its metric row.
+
 Nothing is written on HostedCluster objects. No cluster-monitoring-config
-is ever touched.
+is touched. No CRD is installed.
 
-## Why an object and not labels or a list
+## Why no CRD
 
-- **Duplicates are impossible.** The object name is the cluster name, and
-  Kubernetes will not hold two objects with the same name.
-- **The API server validates.** Missing level, unknown type, or "Generic"
-  instead of "generic" are all rejected on apply - not dropped silently at
-  query time, which is how every earlier bug in this project behaved.
-- **It is readable.** `oc get clusterowners` prints Type, Merkaz, Anaf, Mador.
-- **Argo owns everything**, one file per cluster, prune included.
+A CRD would validate at the API server, but it is cluster-wide, usually
+needs cluster-admin, and `oc delete crd` wipes every object of that kind at
+once. The Helm guards below give the same **loud, early** failure without
+any of that.
 
-## Sync order
+## What is checked before anything deploys
 
-The CRD carries `argocd.argoproj.io/sync-wave: "-1"`, so Argo applies it
-before any ClusterOwner. If the CRD lives in a different Application from the
-objects, sync that one first.
+The chart REFUSES TO RENDER, and Argo shows the error, when:
+
+- the clusters list is empty
+- a `cluster` name is missing, or appears twice
+- `type` is anything but ClickCluster or UPI
+- an ownership level is empty
+- any value breaks `valuePattern` - so "generic" passes, "Generic" does not
+
+That last one matters: silent spelling drift is how one group quietly
+becomes two.
+
+## Rules
+
+1. `cluster` must be **unique across all clusters**, both types.
+2. It must equal that cluster's remote-write `cluster` external label.
+3. Use `generic` for a level that does not apply.
 
 ## Traps already hit in the field - all of them silent
 
@@ -68,7 +78,7 @@ Then in Observe -> Metrics, on the RIGHT cluster (check `oc whoami
 
 ## Coverage check
 
-These two should match. If not, a cluster has no ClusterOwner and is
+These two should match. If not, a cluster is missing from the list and is
 invisible in the dashboard:
 
     count(kube_cluster_ownership_info)

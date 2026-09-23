@@ -1,4 +1,4 @@
-# The Custom Resource State config: what to read, and which fields to lift.
+# The Custom Resource State config: what to read, and which labels to lift.
 # Generated from values.yaml. Never edit this file directly.
 apiVersion: v1
 kind: ConfigMap
@@ -13,13 +13,12 @@ data:
     spec:
       resources:
         - groupVersionKind:
-            group: {{ .Values.clusterOwner.group }}
-            version: {{ .Values.clusterOwner.version }}
-            kind: {{ .Values.clusterOwner.kind }}
+            group: ""
+            version: v1
+            kind: ConfigMap
           metricNamePrefix: {{ .Values.metric.prefix }}
-          # The object's NAME is the cluster's name.
           labelsFromPath:
-            cr_name: [metadata, name]
+            cr_name: [metadata, labels, "{{ .Values.labelPrefix }}{{ .Values.labelSeparator }}cluster"]
           metrics:
             - name: "{{ .Values.metric.name }}"
               help: "Ownership of a cluster. Value is always 1."
@@ -27,7 +26,7 @@ data:
                 type: Info
                 info:
                   labelsFromPath:
-                    type: [spec, type]
+                    type: [metadata, labels, "{{ .Values.labelPrefix }}{{ .Values.labelSeparator }}type"]
                     {{- range .Values.ownershipFields }}
-                    {{ . }}: [spec, {{ . }}]
+                    {{ . }}: [metadata, labels, "{{ $.Values.labelPrefix }}{{ $.Values.labelSeparator }}{{ . }}"]
                     {{- end }}
