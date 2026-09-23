@@ -1,0 +1,72 @@
+# =============================================================
+# ownership-metrics
+# Runs ONE kube-state-metrics on the MCE hub. It reads ClusterOwner
+# objects and exports:
+#
+#   kube_cluster_ownership_info{cr_name, type, merkaz, anaf, mador} 1
+#
+# One ClusterOwner = one cluster = one row. Hosted and UPI clusters
+# are handled identically. Nothing is written on HostedCluster
+# objects, and no cluster-monitoring-config is ever touched.
+# =============================================================
+
+# The CRD this chart installs and reads.
+# Change the group to a domain your organisation owns.
+clusterOwner:
+  group: cluster-owner.io
+  version: v1alpha1
+  kind: ClusterOwner
+  plural: clusterowners
+  # The CRD is owned by the cluster-owners Application, not this chart.
+  # Turn on only if you want one Application to own both.
+  installCRD: false
+
+# The exported metric. Final name is <prefix>_<name> EXACTLY.
+# Nothing is appended for you. An Info metric must be NAMED with _info,
+# or kube-state-metrics registers it and produces no rows at all.
+metric:
+  prefix: kube_cluster
+  name: ownership_info
+
+# Your ownership levels, in order. Add a line here and it flows into
+# the CRD schema, the metric, and the printed columns.
+ownershipFields:
+  - merkaz
+  - anaf
+  - mador
+
+# Allowed shape for every ownership value and for the cluster name.
+# This is what stops "generic" and "Generic" becoming two groups.
+valuePattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+
+# Allowed cluster types.
+types:
+  - ClickCluster
+  - UPI
+
+image:
+  repository: registry.k8s.io/kube-state-metrics/kube-state-metrics
+  tag: v2.16.0
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+# 128Mi is NOT enough: OOMKilled, exit 137, with clean startup logs.
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+
+# Debugging only. "--v=5" shows why an object produces no row.
+extraArgs: []
+
+serviceMonitor:
+  enabled: true
+  interval: 60s
+  scrapeProtocols: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

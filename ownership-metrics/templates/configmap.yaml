@@ -1,6 +1,5 @@
-# The Custom Resource State config.
-# This is what turns CR labels into a metric.
-# The ownership fields are generated from values.yaml.
+# The Custom Resource State config: what to read, and which fields to lift.
+# Generated from values.yaml. Never edit this file directly.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -14,20 +13,21 @@ data:
     spec:
       resources:
         - groupVersionKind:
-            group: {{ .Values.customResource.group }}
-            version: {{ .Values.customResource.version }}
-            kind: {{ .Values.customResource.kind }}
+            group: {{ .Values.clusterOwner.group }}
+            version: {{ .Values.clusterOwner.version }}
+            kind: {{ .Values.clusterOwner.kind }}
           metricNamePrefix: {{ .Values.metric.prefix }}
+          # The object's NAME is the cluster's name.
           labelsFromPath:
-            cr_name:      [metadata, name]
-            cr_namespace: [metadata, namespace]
+            cr_name: [metadata, name]
           metrics:
             - name: "{{ .Values.metric.name }}"
-              help: "Ownership labels for a {{ .Values.customResource.kind }}. Value is always 1."
+              help: "Ownership of a cluster. Value is always 1."
               each:
                 type: Info
                 info:
                   labelsFromPath:
+                    type: [spec, type]
                     {{- range .Values.ownershipFields }}
-                    {{ . }}: [metadata, labels, "{{ $.Values.labelPrefix }}/{{ . }}"]
+                    {{ . }}: [spec, {{ . }}]
                     {{- end }}

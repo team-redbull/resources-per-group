@@ -1,5 +1,4 @@
-# Identity and permissions.
-# Read-only: no write verbs anywhere.
+# Identity and permissions. Read-only: no write verbs anywhere.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -15,8 +14,13 @@ metadata:
   labels:
     {{- include "ownership-metrics.labels" . | nindent 4 }}
 rules:
-  - apiGroups: ["{{ .Values.customResource.group }}"]
-    resources: ["hostedclusters", "nodepools"]
+  # kube-state-metrics DISCOVERS what to watch through the CRD list.
+  # Without this it never starts watching, and exports nothing - silently.
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["{{ .Values.clusterOwner.group }}"]
+    resources: ["{{ .Values.clusterOwner.plural }}"]
     verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

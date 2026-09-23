@@ -1,0 +1,11 @@
+# A UPI cluster. Identical shape - only "type" differs.
+# Use "generic" for a level that does not apply.
+apiVersion: cluster-owner.io/v1alpha1
+kind: ClusterOwner
+metadata:
+  name: upi-prod-1
+spec:
+  type: UPI
+  merkaz: haifa
+  anaf: generic
+  mador: security

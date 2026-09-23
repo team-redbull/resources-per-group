@@ -30,21 +30,30 @@ spec:
             - --custom-resource-state-only=true
             - --port=8080
             - --telemetry-port=8081
+            {{- range .Values.extraArgs }}
+            - {{ . }}
+            {{- end }}
           ports:
             - name: http-metrics
               containerPort: 8080
             - name: telemetry
               containerPort: 8081
+          # kube-state-metrics v2.10+ serves /livez on the metrics port
+          # and /readyz on the telemetry port. Older paths like /healthz
+          # on 8080 return 404, which the kubelet reads as "dead" and the
+          # container is killed in a loop with perfectly clean logs.
           livenessProbe:
             httpGet:
-              path: /healthz
-              port: 8080
+              path: /livez
+              port: http-metrics
             initialDelaySeconds: 5
+            timeoutSeconds: 5
           readinessProbe:
             httpGet:
-              path: /
-              port: 8081
+              path: /readyz
+              port: telemetry
             initialDelaySeconds: 5
+            timeoutSeconds: 5
           volumeMounts:
             - name: crs-config
               mountPath: /etc/ksm

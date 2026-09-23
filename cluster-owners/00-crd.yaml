@@ -1,0 +1,70 @@
+# The registry object. One per cluster, cluster-scoped.
+# The OBJECT NAME is the cluster name, so duplicates are impossible.
+#
+# sync-wave -1 makes Argo apply this BEFORE any ClusterOwner in this folder.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clusterowners.cluster-owner.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  group: cluster-owner.io
+  scope: Cluster
+  names:
+    kind: ClusterOwner
+    listKind: ClusterOwnerList
+    plural: clusterowners
+    singular: clusterowner
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              # Every level is required. A half-filled owner is rejected by
+              # the API server itself, not dropped silently at query time.
+              required:
+                - type
+                - merkaz
+                - anaf
+                - mador
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - ClickCluster
+                    - UPI
+                  description: How the cluster was built.
+                merkaz:
+                  type: string
+                  pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+                  description: Ownership level "merkaz".
+                anaf:
+                  type: string
+                  pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+                  description: Ownership level "anaf". Use "generic" where it does not apply.
+                mador:
+                  type: string
+                  pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+                  description: Ownership level "mador".
+      additionalPrinterColumns:
+        - name: Type
+          type: string
+          jsonPath: .spec.type
+        - name: Merkaz
+          type: string
+          jsonPath: .spec.merkaz
+        - name: Anaf
+          type: string
+          jsonPath: .spec.anaf
+        - name: Mador
+          type: string
+          jsonPath: .spec.mador
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp

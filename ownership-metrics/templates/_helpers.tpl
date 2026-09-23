@@ -3,7 +3,12 @@
 {{- end -}}
 
 {{- define "ownership-metrics.fullname" -}}
-{{- printf "%s-%s" .Release.Name (include "ownership-metrics.name" .) | trunc 63 | trimSuffix "-" -}}
+{{- $name := include "ownership-metrics.name" . -}}
+{{- if contains $name .Release.Name -}}
+{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
 {{- end -}}
 
 {{- define "ownership-metrics.labels" -}}
@@ -18,3 +23,7 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
 app.kubernetes.io/name: {{ include "ownership-metrics.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
+
+{{/* Stop bad input before it becomes a silent empty dashboard. */}}
+{{/* The CRD does the validating now: required levels, allowed types,
+     and the value pattern are all enforced by the API server. */}}

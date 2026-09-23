@@ -1,0 +1,65 @@
+{{- if .Values.clusterOwner.installCRD }}
+# The registry object. One per cluster, cluster-scoped.
+# The OBJECT NAME is the cluster name, so duplicates are impossible.
+#
+# sync-wave -1: Argo applies this before any ClusterOwner that uses it.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: {{ .Values.clusterOwner.plural }}.{{ .Values.clusterOwner.group }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  labels:
+    {{- include "ownership-metrics.labels" . | nindent 4 }}
+spec:
+  group: {{ .Values.clusterOwner.group }}
+  scope: Cluster
+  names:
+    kind: {{ .Values.clusterOwner.kind }}
+    listKind: {{ .Values.clusterOwner.kind }}List
+    plural: {{ .Values.clusterOwner.plural }}
+    singular: {{ .Values.clusterOwner.plural | trimSuffix "s" }}
+  versions:
+    - name: {{ .Values.clusterOwner.version }}
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              # Every level is required. A half-filled owner is rejected
+              # by the API server itself - not silently dropped later.
+              required:
+                - type
+                {{- range .Values.ownershipFields }}
+                - {{ . }}
+                {{- end }}
+              properties:
+                type:
+                  type: string
+                  enum:
+                    {{- range .Values.types }}
+                    - {{ . }}
+                    {{- end }}
+                  description: How the cluster was built.
+                {{- range .Values.ownershipFields }}
+                {{ . }}:
+                  type: string
+                  pattern: {{ $.Values.valuePattern | quote }}
+                  description: Ownership level "{{ . }}". Use "generic" where it does not apply.
+                {{- end }}
+      additionalPrinterColumns:
+        - name: Type
+          type: string
+          jsonPath: .spec.type
+        {{- range .Values.ownershipFields }}
+        - name: {{ . | title }}
+          type: string
+          jsonPath: .spec.{{ . }}
+        {{- end }}
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+{{- end }}

@@ -25,11 +25,15 @@ metadata:
   labels:
     {{- include "ownership-metrics.labels" . | nindent 4 }}
 spec:
+  {{- with .Values.serviceMonitor.scrapeProtocols }}
+  scrapeProtocols:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "ownership-metrics.selectorLabels" . | nindent 6 }}
   endpoints:
     - port: http-metrics
+      scheme: http
       interval: {{ .Values.serviceMonitor.interval }}
-      honorLabels: true
 {{- end }}
