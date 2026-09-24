@@ -1,0 +1,14 @@
+Owner record written for cluster "{{ .Values.cluster }}".
+
+  type   : {{ .Values.type }}
+{{- $root := . }}
+{{- range .Values.ownershipFields }}
+  {{ printf "%-7s" . }}: {{ index $root.Values.owners . }}
+{{- end }}
+
+Check it:
+  oc -n {{ .Release.Namespace }} get cm {{ include "cluster-owner.configMapName" . }} --show-labels
+
+The exporter (chart A) must run in THIS SAME namespace: {{ .Release.Namespace }}
+If it runs elsewhere, it will not see this record and the cluster will be
+missing from the dashboard, with no error anywhere.

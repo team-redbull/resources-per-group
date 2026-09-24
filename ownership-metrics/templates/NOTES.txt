@@ -1,15 +1,17 @@
-ownership-metrics installed. {{ len .Values.clusters }} cluster(s) in the registry.
+ownership-metrics (chart A, the exporter) installed.
 
 Metric: {{ .Values.metric.prefix }}_{{ .Values.metric.name }}
+Reads:  ConfigMaps in {{ .Release.Namespace }} labelled
+        {{ .Values.labelPrefix }}{{ .Values.labelSeparator }}cluster
 
-1) See the registry:
-   oc -n {{ .Release.Namespace }} get cm -l {{ .Values.labelPrefix }}{{ .Values.labelSeparator }}type
+1) Did chart B create the owner ConfigMap here?
+   oc -n {{ .Release.Namespace }} get cm --show-labels | grep {{ .Values.labelPrefix }}
 
-2) THE GATE - real rows, not just HELP and TYPE:
+   If not, this exporter will serve HELP and TYPE lines and no rows.
+
+2) THE GATE - real rows:
    oc -n {{ .Release.Namespace }} port-forward svc/{{ include "ownership-metrics.fullname" . }} 8080:8080
    curl -s localhost:8080/metrics | grep -v '^#'
-
-   Expect {{ len .Values.clusters }} row(s), one per cluster.
 
 3) Nothing there? In order:
    oc -n {{ .Release.Namespace }} logs deploy/{{ include "ownership-metrics.fullname" . }} | grep -i -E "forbidden|suffix|error"

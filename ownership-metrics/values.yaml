@@ -1,0 +1,58 @@
+# =============================================================
+# CHART A - ownership-metrics  (the exporter)
+#
+# IDENTICAL on every cluster, ClickCluster and UPI alike.
+# It reads the owner ConfigMap that CHART B (cluster-owner)
+# creates in the same namespace, and exports:
+#
+#   kube_cluster_ownership_info{cr_name, type, merkaz, anaf, mador} 1
+#
+# It holds NO cluster data of its own. Deploy it once per cluster
+# and never touch it again.
+# =============================================================
+
+# MUST match chart B's labelPrefix and labelSeparator, or the
+# exporter reads nothing. These two values are the contract
+# between the charts.
+labelPrefix: cluster-owner
+labelSeparator: "/"
+
+# The levels to lift out. MUST match chart B's list.
+ownershipFields:
+  - merkaz
+  - anaf
+  - mador
+
+# The exported metric. Final name is <prefix>_<name> EXACTLY.
+# Nothing is appended for you. An Info metric must be NAMED with
+# _info, or kube-state-metrics registers it and produces NO rows.
+metric:
+  prefix: kube_cluster
+  name: ownership_info
+
+image:
+  repository: registry.k8s.io/kube-state-metrics/kube-state-metrics
+  tag: v2.16.0
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+# 128Mi is NOT enough: OOMKilled, exit 137, with clean startup logs.
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+
+# Debugging only. "--v=5" shows why an object produces no row.
+extraArgs: []
+
+serviceMonitor:
+  enabled: true
+  interval: 60s
+  scrapeProtocols: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

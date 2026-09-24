@@ -1,0 +1,49 @@
+# =============================================================
+# CHART B - cluster-owner  (this cluster's owner record)
+#
+# Creates ONE ConfigMap describing who owns THIS cluster.
+# Chart A (ownership-metrics) reads it and turns it into a metric.
+#
+# Delivery differs by cluster type:
+#   UPI          -> its own Argo Application, one per cluster
+#   ClickCluster -> created together with the cluster
+# The chart itself is the same either way.
+# =============================================================
+
+# REQUIRED. This cluster's name.
+# MUST equal the cluster's remote-write "cluster" external label,
+# and be unique across ALL clusters, both types.
+cluster: ""
+
+# How the cluster was built. ClickCluster or UPI.
+type: UPI
+
+# REQUIRED. Every level must be set.
+# Use "generic" for a level that does not apply.
+owners:
+  merkaz: ""
+  anaf: ""
+  mador: ""
+
+# ---- The contract with chart A ------------------------------
+# These three MUST match chart A's values, or the exporter reads
+# nothing and the dashboard silently loses this cluster.
+labelPrefix: cluster-owner
+labelSeparator: "/"
+ownershipFields:
+  - merkaz
+  - anaf
+  - mador
+
+# Allowed shape for the cluster name and every owner value.
+# This is what stops "generic" and "Generic" quietly becoming
+# two different groups.
+valuePattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+
+# Allowed cluster types.
+types:
+  - ClickCluster
+  - UPI
+
+# Defaults to owner-<cluster>.
+configMapName: ""

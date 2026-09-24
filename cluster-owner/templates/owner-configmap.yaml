@@ -1,0 +1,21 @@
+{{- include "cluster-owner.validate" . }}
+# THIS cluster's owner record.
+#
+# All the data lives in LABELS, not in "data". That is what lets
+# kube-state-metrics read it: labels are a structured field it can walk,
+# while "data" is free text it cannot parse.
+#
+# The body is intentionally empty. This object is a label carrier.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cluster-owner.configMapName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cluster-owner.labels" . | nindent 4 }}
+    {{ .Values.labelPrefix }}{{ .Values.labelSeparator }}cluster: {{ .Values.cluster | quote }}
+    {{ .Values.labelPrefix }}{{ .Values.labelSeparator }}type: {{ .Values.type | quote }}
+    {{- $root := . }}
+    {{- range .Values.ownershipFields }}
+    {{ $root.Values.labelPrefix }}{{ $root.Values.labelSeparator }}{{ . }}: {{ index $root.Values.owners . | quote }}
+    {{- end }}

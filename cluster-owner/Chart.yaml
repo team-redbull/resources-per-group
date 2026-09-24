@@ -1,0 +1,6 @@
+apiVersion: v2
+name: cluster-owner
+description: Writes THIS cluster's owner record, read by the ownership-metrics exporter.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
