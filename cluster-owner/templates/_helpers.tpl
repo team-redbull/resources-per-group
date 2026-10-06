@@ -2,7 +2,10 @@
 {{- default (printf "owner-%s" .Values.cluster) .Values.configMapName -}}
 {{- end -}}
 
+{{/* app.kubernetes.io/component marks this as a cluster owner record.
+     Humans filter on it; the exporter keys off cluster-owner/cluster. */}}
 {{- define "cluster-owner.labels" -}}
+app.kubernetes.io/component: owner-record
 app.kubernetes.io/name: {{ .Chart.Name }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}

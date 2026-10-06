@@ -2,17 +2,19 @@
 # CHART B - cluster-owner  (this cluster's owner record)
 #
 # Creates ONE ConfigMap describing who owns THIS cluster.
-# Chart A (ownership-metrics) reads it and turns it into a metric.
+# Chart A (ownership-metrics) reads its labels and turns them
+# into kube_configmap_labels.
 #
-# Delivery differs by cluster type:
-#   UPI          -> its own Argo Application, one per cluster
-#   ClickCluster -> created together with the cluster
-# The chart itself is the same either way.
+# One release per cluster:
+#   ClickCluster -> on the MCE hub, with the cluster's creation
+#   UPI          -> on that UPI cluster, its own Application
+# Same chart either way. Only these values differ.
 # =============================================================
 
 # REQUIRED. This cluster's name.
 # MUST equal the cluster's remote-write "cluster" external label,
 # and be unique across ALL clusters, both types.
+# That string is the join key to the node metrics.
 cluster: ""
 
 # How the cluster was built. ClickCluster or UPI.
@@ -26,10 +28,19 @@ owners:
   mador: ""
 
 # ---- The contract with chart A ------------------------------
-# These three MUST match chart A's values, or the exporter reads
-# nothing and the dashboard silently loses this cluster.
+# These MUST match chart A's values, and both charts MUST deploy
+# to the same namespace. Otherwise the exporter lifts nothing and
+# this cluster vanishes from the dashboard with no error anywhere.
 labelPrefix: cluster-owner
 labelSeparator: "/"
+
+# The marker that says "this ConfigMap IS an owner record".
+# Chart A reads every ConfigMap in its namespace - it has no label
+# selector - so without this, any other ConfigMap carrying a
+# cluster-owner/* label would become a metric row.
+markerKey: record
+markerValue: "true"
+
 ownershipFields:
   - merkaz
   - anaf
